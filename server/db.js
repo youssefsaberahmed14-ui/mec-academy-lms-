@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const seedData = require('./data/seedData');
 
-const DB_FILE = path.join(__dirname, 'data', 'database.json');
+const DB_FILE = process.env.VERCEL 
+  ? path.join('/tmp', 'database.json') 
+  : path.join(__dirname, 'data', 'database.json');
 
 class Database {
   constructor() {

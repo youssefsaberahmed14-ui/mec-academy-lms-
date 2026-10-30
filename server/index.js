@@ -53,9 +53,13 @@ app.use((req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`===============================================`);
-  console.log(`  MEC ACADEMY LEARNING MANAGEMENT SYSTEM`);
-  console.log(`  Backend API listening on http://localhost:${PORT}`);
-  console.log(`===============================================`);
-});
+if (!process.env.VERCEL && require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`===============================================`);
+    console.log(`  MEC ACADEMY LEARNING MANAGEMENT SYSTEM`);
+    console.log(`  Backend API listening on http://localhost:${PORT}`);
+    console.log(`===============================================`);
+  });
+}
+
+module.exports = app;
