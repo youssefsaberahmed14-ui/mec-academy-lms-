@@ -169,12 +169,6 @@ export default function StaffLoginPage({ onNavigate }) {
             </button>
           </form>
 
-          {/* Secure Hint */}
-          <div className="mt-6 pt-4 border-t border-slate-800 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span>Default seed password is <code className="bg-slate-950 text-indigo-300 font-mono px-1 py-0.5 rounded">Mec@2026</code>.</span>
-          </div>
-
         </div>
 
       </main>

@@ -356,12 +356,6 @@ export default function LoginPage({ onNavigate }) {
 
         </div>
 
-        {/* Security Note */}
-        <div className="mt-10 max-w-xl mx-auto p-4 bg-white/80 rounded-2xl border border-slate-200 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
-          <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-          <span>Default initial password for seed accounts is <code className="bg-slate-100 text-indigo-800 font-mono font-bold px-1.5 py-0.5 rounded">Mec@2026</code>. You can change it after signing in.</span>
-        </div>
-
       </main>
 
       {/* Footer */}
