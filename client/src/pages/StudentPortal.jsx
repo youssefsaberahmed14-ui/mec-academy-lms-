@@ -42,7 +42,26 @@ export default function StudentPortal() {
   const [selectedGroupIdx, setSelectedGroupIdx] = useState(0);
   
   // Navigation tabs: 'overview' | 'sessions' | 'recordings' | 'assignments' | 'materials'
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    return ['overview', 'sessions', 'recordings', 'assignments', 'materials'].includes(hash) ? hash : 'overview';
+  });
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    window.location.hash = tab;
+  };
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (['overview', 'sessions', 'recordings', 'assignments', 'materials'].includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
   
   const [expandedSessions, setExpandedSessions] = useState({});
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -213,7 +232,7 @@ export default function StudentPortal() {
         
         {/* Tab 1: Dashboard Overview */}
         <button
-          onClick={() => setActiveTab('overview')}
+          onClick={() => switchTab('overview')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 ${
             activeTab === 'overview'
               ? 'bg-white text-indigo-700 shadow-sm'
@@ -226,7 +245,7 @@ export default function StudentPortal() {
 
         {/* Tab 2: Sessions */}
         <button
-          onClick={() => setActiveTab('sessions')}
+          onClick={() => switchTab('sessions')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 ${
             activeTab === 'sessions'
               ? 'bg-white text-indigo-700 shadow-sm'
@@ -242,7 +261,7 @@ export default function StudentPortal() {
 
         {/* Tab 3: Recorded Sessions */}
         <button
-          onClick={() => setActiveTab('recordings')}
+          onClick={() => switchTab('recordings')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 ${
             activeTab === 'recordings'
               ? 'bg-white text-indigo-700 shadow-sm'
@@ -258,7 +277,7 @@ export default function StudentPortal() {
 
         {/* Tab 4: Assignments */}
         <button
-          onClick={() => setActiveTab('assignments')}
+          onClick={() => switchTab('assignments')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 ${
             activeTab === 'assignments'
               ? 'bg-white text-indigo-700 shadow-sm'
@@ -276,7 +295,7 @@ export default function StudentPortal() {
 
         {/* Tab 5: Materials & Presentations */}
         <button
-          onClick={() => setActiveTab('materials')}
+          onClick={() => switchTab('materials')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all cursor-pointer shrink-0 ${
             activeTab === 'materials'
               ? 'bg-white text-indigo-700 shadow-sm'
