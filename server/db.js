@@ -273,7 +273,10 @@ class Database {
       description: assignmentData.description || '',
       dueDate: assignmentData.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
       maxPoints: Number(assignmentData.maxPoints) || 100,
-      attachmentUrl: assignmentData.attachmentUrl || ''
+      attachmentUrl: assignmentData.attachmentUrl || '',
+      attachmentName: assignmentData.attachmentName || '',
+      attachmentSize: assignmentData.attachmentSize || '',
+      isLocalFile: Boolean(assignmentData.isLocalFile)
     };
 
     session.assignments.push(newAsgn);
@@ -292,7 +295,9 @@ class Database {
       type: materialData.type || 'code',
       url: materialData.url,
       description: materialData.description || '',
-      size: materialData.size || '1.5 MB'
+      size: materialData.size || '1.5 MB',
+      fileName: materialData.fileName || '',
+      isLocalFile: Boolean(materialData.isLocalFile)
     };
 
     session.instructorMaterials.push(newMat);
@@ -309,7 +314,10 @@ class Database {
       id: `pres_${Date.now()}`,
       title: presentationData.title,
       slidesUrl: presentationData.slidesUrl,
-      slideCount: Number(presentationData.slideCount) || 30
+      slideCount: Number(presentationData.slideCount) || 30,
+      fileName: presentationData.fileName || '',
+      fileSize: presentationData.fileSize || '',
+      isLocalFile: Boolean(presentationData.isLocalFile)
     };
 
     session.presentations.push(newPres);
@@ -329,7 +337,10 @@ class Database {
       videoUrl: recordingData.videoUrl,
       duration: recordingData.duration || '2h 00m',
       summary: recordingData.summary || '',
-      topics
+      topics,
+      fileName: recordingData.fileName || '',
+      fileSize: recordingData.fileSize || '',
+      isLocalFile: Boolean(recordingData.isLocalFile)
     };
 
     this.save();

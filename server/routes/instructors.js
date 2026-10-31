@@ -421,11 +421,15 @@ router.post('/session/:sessionId/recording', requireInstructor, (req, res) => {
   }
 
   try {
+    const { videoUrl, duration, summary, topics, fileName, fileSize, isLocalFile } = req.body;
     const recording = db.setSessionRecording(sessionId, {
       videoUrl: videoUrl.trim(),
       duration: duration || '2h 00m',
       summary: summary || '',
-      topics
+      topics,
+      fileName,
+      fileSize,
+      isLocalFile
     });
 
     // If adding recording, also ensure session is marked as held
@@ -453,7 +457,7 @@ router.post('/session/:sessionId/assignments', requireInstructor, (req, res) => 
     return res.status(403).json({ error: 'Unauthorized to add assignments to this session' });
   }
 
-  const { title, description, dueDate, maxPoints, attachmentUrl } = req.body;
+  const { title, description, dueDate, maxPoints, attachmentUrl, attachmentName, attachmentSize, isLocalFile } = req.body;
   if (!title) {
     return res.status(400).json({ error: 'Assignment title is required' });
   }
@@ -464,7 +468,10 @@ router.post('/session/:sessionId/assignments', requireInstructor, (req, res) => 
       description: description || '',
       dueDate: dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
       maxPoints: Number(maxPoints) || 100,
-      attachmentUrl: attachmentUrl || ''
+      attachmentUrl: attachmentUrl || '',
+      attachmentName: attachmentName || '',
+      attachmentSize: attachmentSize || '',
+      isLocalFile: Boolean(isLocalFile)
     });
 
     res.status(201).json({
@@ -489,7 +496,7 @@ router.post('/session/:sessionId/materials', requireInstructor, (req, res) => {
     return res.status(403).json({ error: 'Unauthorized to add materials to this session' });
   }
 
-  const { title, type, url, description, size } = req.body;
+  const { title, type, url, description, size, fileName, isLocalFile } = req.body;
   if (!title || !url) {
     return res.status(400).json({ error: 'Material title and resource URL are required' });
   }
@@ -500,7 +507,9 @@ router.post('/session/:sessionId/materials', requireInstructor, (req, res) => {
       type: type || 'code',
       url: url.trim(),
       description: description || '',
-      size: size || '1.5 MB'
+      size: size || '1.5 MB',
+      fileName: fileName || '',
+      isLocalFile: Boolean(isLocalFile)
     });
 
     res.status(201).json({
@@ -525,7 +534,7 @@ router.post('/session/:sessionId/presentations', requireInstructor, (req, res) =
     return res.status(403).json({ error: 'Unauthorized to add presentations to this session' });
   }
 
-  const { title, slidesUrl, slideCount } = req.body;
+  const { title, slidesUrl, slideCount, fileName, fileSize, isLocalFile } = req.body;
   if (!title || !slidesUrl) {
     return res.status(400).json({ error: 'Presentation title and slides URL are required' });
   }
@@ -534,7 +543,10 @@ router.post('/session/:sessionId/presentations', requireInstructor, (req, res) =
     const newPres = db.addPresentationToSession(sessionId, {
       title: title.trim(),
       slidesUrl: slidesUrl.trim(),
-      slideCount: Number(slideCount) || 30
+      slideCount: Number(slideCount) || 30,
+      fileName: fileName || '',
+      fileSize: fileSize || '',
+      isLocalFile: Boolean(isLocalFile)
     });
 
     res.status(201).json({

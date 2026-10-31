@@ -32,7 +32,10 @@ import {
   CheckCircle, 
   HelpCircle,
   Layers,
-  ArrowRight
+  ArrowRight,
+  UploadCloud,
+  FileUp,
+  HardDrive
 } from 'lucide-react';
 
 export default function InstructorPortal() {
@@ -72,10 +75,19 @@ export default function InstructorPortal() {
 
   // Modals for adding curriculum resources
   const [addSessionModalOpen, setAddSessionModalOpen] = useState(false);
-  const [recordingModalSession, setRecordingModalSession] = useState(null);
-  const [assignmentModalSession, setAssignmentModalSession] = useState(null);
-  const [materialModalSession, setMaterialModalSession] = useState(null);
-  const [presentationModalSession, setPresentationModalSession] = useState(null);
+  
+  // Modal target sessions
+  const [recordingModalOpen, setRecordingModalOpen] = useState(false);
+  const [recordingTargetSessionId, setRecordingTargetSessionId] = useState('');
+
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [assignmentTargetSessionId, setAssignmentTargetSessionId] = useState('');
+
+  const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [materialTargetSessionId, setMaterialTargetSessionId] = useState('');
+
+  const [presentationModalOpen, setPresentationModalOpen] = useState(false);
+  const [presentationTargetSessionId, setPresentationTargetSessionId] = useState('');
 
   // Form states
   const [sessionForm, setSessionForm] = useState({
@@ -88,31 +100,47 @@ export default function InstructorPortal() {
   });
 
   const [recordingForm, setRecordingForm] = useState({
+    source: 'file', // 'file' | 'url'
     videoUrl: '',
     duration: '2h 15m',
     summary: '',
-    topics: ''
+    topics: '',
+    fileName: '',
+    fileSize: '',
+    isLocalFile: false
   });
 
   const [assignmentForm, setAssignmentForm] = useState({
+    source: 'file', // 'file' | 'url'
     title: '',
     description: '',
     dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-    maxPoints: 100
+    maxPoints: 100,
+    attachmentUrl: '',
+    attachmentName: '',
+    attachmentSize: '',
+    isLocalFile: false
   });
 
   const [materialForm, setMaterialForm] = useState({
+    source: 'file', // 'file' | 'url'
     title: '',
     type: 'code',
     url: '',
     description: '',
-    size: '2.5 MB'
+    size: '2.5 MB',
+    fileName: '',
+    isLocalFile: false
   });
 
   const [presentationForm, setPresentationForm] = useState({
+    source: 'file', // 'file' | 'url'
     title: '',
     slidesUrl: '',
-    slideCount: 40
+    slideCount: 40,
+    fileName: '',
+    fileSize: '',
+    isLocalFile: false
   });
 
   const [submittingResource, setSubmittingResource] = useState(false);
@@ -161,6 +189,180 @@ export default function InstructorPortal() {
       fetchGroupDetails(selectedGroupId);
     }
   }, [selectedGroupId]);
+
+  const allSessions = groupDetails?.sessions || [];
+  const recordingsList = allSessions.filter(s => s.recordedSession);
+
+  // File Handlers for uploading from device
+  const handleRecordingFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRecordingForm(prev => ({
+        ...prev,
+        source: 'file',
+        videoUrl: reader.result,
+        fileName: file.name,
+        fileSize: sizeMB,
+        isLocalFile: true,
+        summary: prev.summary || `Class Recording: ${file.name.replace(/\.[^/.]+$/, '')}`
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAssignmentFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const sizeFormatted = file.size > 1024 * 1024 
+      ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' 
+      : (file.size / 1024).toFixed(0) + ' KB';
+    
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAssignmentForm(prev => ({
+        ...prev,
+        attachmentUrl: reader.result,
+        attachmentName: file.name,
+        attachmentSize: sizeFormatted,
+        isLocalFile: true,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, '')
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleMaterialFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const sizeFormatted = file.size > 1024 * 1024 
+      ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' 
+      : (file.size / 1024).toFixed(0) + ' KB';
+    
+    let detectedType = 'code';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (['pdf', 'doc', 'docx', 'txt'].includes(ext)) detectedType = 'doc';
+    else if (['ppt', 'pptx', 'key'].includes(ext)) detectedType = 'slides';
+    else if (['zip', 'rar', 'tar', 'gz', 'json', 'py', 'js', 'ts', 'java'].includes(ext)) detectedType = 'code';
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMaterialForm(prev => ({
+        ...prev,
+        source: 'file',
+        url: reader.result,
+        fileName: file.name,
+        size: sizeFormatted,
+        type: detectedType,
+        isLocalFile: true,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, '')
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePresentationFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const sizeFormatted = file.size > 1024 * 1024 
+      ? (file.size / (1024 * 1024)).toFixed(1) + ' MB' 
+      : (file.size / 1024).toFixed(0) + ' KB';
+    
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPresentationForm(prev => ({
+        ...prev,
+        source: 'file',
+        slidesUrl: reader.result,
+        fileName: file.name,
+        fileSize: sizeFormatted,
+        slideCount: prev.slideCount || 35,
+        isLocalFile: true,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, '')
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Open modal helpers with target session
+  const openRecordingModal = (targetSession = null) => {
+    const session = targetSession || allSessions[0];
+    setRecordingTargetSessionId(session ? session.id : '');
+    if (session && session.recordedSession) {
+      setRecordingForm({
+        source: session.recordedSession.isLocalFile ? 'file' : 'url',
+        videoUrl: session.recordedSession.videoUrl || '',
+        duration: session.recordedSession.duration || '2h 15m',
+        summary: session.recordedSession.summary || '',
+        topics: (session.recordedSession.topics || []).join(', '),
+        fileName: session.recordedSession.fileName || '',
+        fileSize: session.recordedSession.fileSize || '',
+        isLocalFile: Boolean(session.recordedSession.isLocalFile)
+      });
+    } else {
+      setRecordingForm({
+        source: 'file',
+        videoUrl: '',
+        duration: '2h 15m',
+        summary: '',
+        topics: '',
+        fileName: '',
+        fileSize: '',
+        isLocalFile: false
+      });
+    }
+    setRecordingModalOpen(true);
+  };
+
+  const openAssignmentModal = (targetSession = null) => {
+    const session = targetSession || allSessions[0];
+    setAssignmentTargetSessionId(session ? session.id : '');
+    setAssignmentForm({
+      source: 'file',
+      title: session ? `Assignment: ${session.title}` : 'Practical Lab Assignment',
+      description: '',
+      dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      maxPoints: 100,
+      attachmentUrl: '',
+      attachmentName: '',
+      attachmentSize: '',
+      isLocalFile: false
+    });
+    setAssignmentModalOpen(true);
+  };
+
+  const openMaterialModal = (targetSession = null) => {
+    const session = targetSession || allSessions[0];
+    setMaterialTargetSessionId(session ? session.id : '');
+    setMaterialForm({
+      source: 'file',
+      title: session ? `Resources for ${session.title}` : 'Lecture Resource File',
+      type: 'code',
+      url: '',
+      description: '',
+      size: '2.5 MB',
+      fileName: '',
+      isLocalFile: false
+    });
+    setMaterialModalOpen(true);
+  };
+
+  const openPresentationModal = (targetSession = null) => {
+    const session = targetSession || allSessions[0];
+    setPresentationTargetSessionId(session ? session.id : '');
+    setPresentationForm({
+      source: 'file',
+      title: session ? `Slide Deck: ${session.title}` : 'Chapter Keynote Presentation',
+      slidesUrl: '',
+      slideCount: 40,
+      fileName: '',
+      fileSize: '',
+      isLocalFile: false
+    });
+    setPresentationModalOpen(true);
+  };
 
   // Handle Excel Export
   const handleExcelExport = async () => {
@@ -253,19 +455,22 @@ export default function InstructorPortal() {
     }
   };
 
-  // Add/Edit Recording
+  // Save Recording
   const handleSaveRecording = async (e) => {
     e.preventDefault();
-    if (!recordingModalSession || !recordingForm.videoUrl.trim()) return;
+    if (!recordingTargetSessionId || !recordingForm.videoUrl.trim()) {
+      alert('Please select a target session and provide a video file or stream URL.');
+      return;
+    }
     setSubmittingResource(true);
     try {
-      const res = await apiRequest(`/instructor/session/${recordingModalSession.id}/recording`, {
+      const targetSession = allSessions.find(s => s.id === recordingTargetSessionId);
+      const res = await apiRequest(`/instructor/session/${recordingTargetSessionId}/recording`, {
         method: 'POST',
         body: JSON.stringify(recordingForm)
       });
-      showStatus(res.message || 'Recording published! Visible to students.');
-      setRecordingModalSession(null);
-      setRecordingForm({ videoUrl: '', duration: '2h 15m', summary: '', topics: '' });
+      showStatus(`Recording saved for Session ${targetSession?.sessionNumber || ''}! Visible to students.`);
+      setRecordingModalOpen(false);
       fetchGroupDetails(selectedGroupId);
     } catch (err) {
       alert(err.message || 'Failed to save recording');
@@ -274,24 +479,22 @@ export default function InstructorPortal() {
     }
   };
 
-  // Add Assignment
+  // Save Assignment
   const handleSaveAssignment = async (e) => {
     e.preventDefault();
-    if (!assignmentModalSession || !assignmentForm.title.trim()) return;
+    if (!assignmentTargetSessionId || !assignmentForm.title.trim()) {
+      alert('Please select a target session and provide an assignment title.');
+      return;
+    }
     setSubmittingResource(true);
     try {
-      const res = await apiRequest(`/instructor/session/${assignmentModalSession.id}/assignments`, {
+      const targetSession = allSessions.find(s => s.id === assignmentTargetSessionId);
+      const res = await apiRequest(`/instructor/session/${assignmentTargetSessionId}/assignments`, {
         method: 'POST',
         body: JSON.stringify(assignmentForm)
       });
-      showStatus(res.message || 'Assignment added! Visible to students.');
-      setAssignmentModalSession(null);
-      setAssignmentForm({
-        title: '',
-        description: '',
-        dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-        maxPoints: 100
-      });
+      showStatus(`Assignment added to Session ${targetSession?.sessionNumber || ''}! Visible to students.`);
+      setAssignmentModalOpen(false);
       fetchGroupDetails(selectedGroupId);
     } catch (err) {
       alert(err.message || 'Failed to add assignment');
@@ -300,19 +503,22 @@ export default function InstructorPortal() {
     }
   };
 
-  // Add Material
+  // Save Material
   const handleSaveMaterial = async (e) => {
     e.preventDefault();
-    if (!materialModalSession || !materialForm.title.trim() || !materialForm.url.trim()) return;
+    if (!materialTargetSessionId || !materialForm.title.trim() || !materialForm.url.trim()) {
+      alert('Please select a target session and choose a local file or URL.');
+      return;
+    }
     setSubmittingResource(true);
     try {
-      const res = await apiRequest(`/instructor/session/${materialModalSession.id}/materials`, {
+      const targetSession = allSessions.find(s => s.id === materialTargetSessionId);
+      const res = await apiRequest(`/instructor/session/${materialTargetSessionId}/materials`, {
         method: 'POST',
         body: JSON.stringify(materialForm)
       });
-      showStatus(res.message || 'Material attached! Visible to students.');
-      setMaterialModalSession(null);
-      setMaterialForm({ title: '', type: 'code', url: '', description: '', size: '2.5 MB' });
+      showStatus(`Material attached to Session ${targetSession?.sessionNumber || ''}! Visible to students.`);
+      setMaterialModalOpen(false);
       fetchGroupDetails(selectedGroupId);
     } catch (err) {
       alert(err.message || 'Failed to add material');
@@ -321,19 +527,22 @@ export default function InstructorPortal() {
     }
   };
 
-  // Add Presentation
+  // Save Presentation
   const handleSavePresentation = async (e) => {
     e.preventDefault();
-    if (!presentationModalSession || !presentationForm.title.trim() || !presentationForm.slidesUrl.trim()) return;
+    if (!presentationTargetSessionId || !presentationForm.title.trim() || !presentationForm.slidesUrl.trim()) {
+      alert('Please select a target session and provide slide deck file or URL.');
+      return;
+    }
     setSubmittingResource(true);
     try {
-      const res = await apiRequest(`/instructor/session/${presentationModalSession.id}/presentations`, {
+      const targetSession = allSessions.find(s => s.id === presentationTargetSessionId);
+      const res = await apiRequest(`/instructor/session/${presentationTargetSessionId}/presentations`, {
         method: 'POST',
         body: JSON.stringify(presentationForm)
       });
-      showStatus(res.message || 'Presentation attached! Visible to students.');
-      setPresentationModalSession(null);
-      setPresentationForm({ title: '', slidesUrl: '', slideCount: 40 });
+      showStatus(`Slide deck attached to Session ${targetSession?.sessionNumber || ''}! Visible to students.`);
+      setPresentationModalOpen(false);
       fetchGroupDetails(selectedGroupId);
     } catch (err) {
       alert(err.message || 'Failed to add presentation');
@@ -352,8 +561,6 @@ export default function InstructorPortal() {
   }
 
   const activeGroupSummary = groups.find(g => g.id === selectedGroupId);
-  const allSessions = groupDetails?.sessions || [];
-  const recordingsList = allSessions.filter(s => s.recordedSession);
   
   // Aggregate all assignments across sessions
   const allAssignments = [];
@@ -366,7 +573,7 @@ export default function InstructorPortal() {
   // Aggregate all materials and presentations
   const allMaterials = [];
   allSessions.forEach(s => {
-    (s.materials || []).forEach(m => {
+    (s.instructorMaterials || s.materials || []).forEach(m => {
       allMaterials.push({ ...m, itemType: 'material', sessionNumber: s.sessionNumber, sessionTitle: s.title, sessionId: s.id });
     });
     (s.presentations || []).forEach(p => {
@@ -524,7 +731,6 @@ export default function InstructorPortal() {
           ========================================================================= */}
       {activePage === 'sessions' && (
         <div className="space-y-6">
-          {/* Page Header */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -659,7 +865,7 @@ export default function InstructorPortal() {
                       <div className="flex flex-wrap gap-2">
                         {session.recordedSession ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-700 rounded-lg text-[11px] font-semibold border border-red-200">
-                            <Video className="w-3 h-3" /> Video Attached ({session.recordedSession.duration})
+                            <Video className="w-3 h-3" /> Video Attached ({session.recordedSession.duration}) {session.recordedSession.isLocalFile && '• 📁 Device File'}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[11px]">
@@ -672,51 +878,34 @@ export default function InstructorPortal() {
                         </span>
 
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 rounded-lg text-[11px] font-semibold border border-purple-200">
-                          <FolderDown className="w-3 h-3" /> {(session.materials?.length || 0) + (session.presentations?.length || 0)} Materials & Slides
+                          <FolderDown className="w-3 h-3" /> {(session.instructorMaterials?.length || session.materials?.length || 0) + (session.presentations?.length || 0)} Materials & Slides
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => {
-                            setRecordingModalSession(session);
-                            if (session.recordedSession) {
-                              setRecordingForm({
-                                videoUrl: session.recordedSession.videoUrl || '',
-                                duration: session.recordedSession.duration || '2h 15m',
-                                summary: session.recordedSession.summary || '',
-                                topics: (session.recordedSession.topics || []).join(', ')
-                              });
-                            } else {
-                              setRecordingForm({ videoUrl: '', duration: '2h 15m', summary: '', topics: '' });
-                            }
-                          }}
+                          onClick={() => openRecordingModal(session)}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-red-50 hover:text-red-700 rounded-lg text-[11px] font-semibold text-slate-600 transition-colors cursor-pointer"
                         >
                           + Recording
                         </button>
                         <button
-                          onClick={() => {
-                            setAssignmentModalSession(session);
-                            setAssignmentForm({
-                              title: `Assignment: ${session.title}`,
-                              description: '',
-                              dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-                              maxPoints: 100
-                            });
-                          }}
+                          onClick={() => openAssignmentModal(session)}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-lg text-[11px] font-semibold text-slate-600 transition-colors cursor-pointer"
                         >
                           + Assignment
                         </button>
                         <button
-                          onClick={() => {
-                            setMaterialModalSession(session);
-                            setMaterialForm({ title: `Resource: ${session.title}`, type: 'code', url: '', description: '', size: '2 MB' });
-                          }}
+                          onClick={() => openMaterialModal(session)}
                           className="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 rounded-lg text-[11px] font-semibold text-slate-600 transition-colors cursor-pointer"
                         >
                           + Material
+                        </button>
+                        <button
+                          onClick={() => openPresentationModal(session)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 rounded-lg text-[11px] font-semibold text-slate-600 transition-colors cursor-pointer"
+                        >
+                          + Slides
                         </button>
                       </div>
                     </div>
@@ -733,7 +922,6 @@ export default function InstructorPortal() {
           ========================================================================= */}
       {activePage === 'recordings' && (
         <div className="space-y-6">
-          {/* Page Header */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -743,18 +931,19 @@ export default function InstructorPortal() {
               </div>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Recorded Lectures & Video Vault</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Publish full session video replays, playback URLs, durations, and key topics for student revision.
+                Upload video replays directly from your device or link YouTube streams for any session.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1.5 bg-red-50 text-red-700 rounded-xl text-xs font-bold border border-red-200">
-                {recordingsList.length} of {allSessions.length} Sessions Recorded
-              </span>
-            </div>
+            <button
+              onClick={() => openRecordingModal()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add / Upload Recording</span>
+            </button>
           </div>
 
-          {/* Recordings Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {allSessions.map((session) => {
               const rec = session.recordedSession;
@@ -780,7 +969,9 @@ export default function InstructorPortal() {
                         <div className="p-3 bg-red-50/60 rounded-2xl border border-red-100 flex items-center justify-between">
                           <div className="flex items-center gap-2 text-xs font-semibold text-red-900 truncate">
                             <Video className="w-4 h-4 text-red-600 shrink-0" />
-                            <span className="truncate">{rec.videoUrl}</span>
+                            <span className="truncate">
+                              {rec.fileName ? `📁 ${rec.fileName}` : rec.videoUrl}
+                            </span>
                           </div>
                           <span className="text-[11px] font-mono font-bold bg-white text-red-700 px-2 py-0.5 rounded-md border border-red-200 shrink-0">
                             {rec.duration}
@@ -806,7 +997,7 @@ export default function InstructorPortal() {
                     ) : (
                       <div className="py-6 text-center text-slate-400 text-xs">
                         <Video className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                        <p>No video recording published yet for this session.</p>
+                        <p>No video recording published yet for Session {session.sessionNumber}.</p>
                       </div>
                     )}
                   </div>
@@ -815,32 +1006,21 @@ export default function InstructorPortal() {
                     {rec ? (
                       <a
                         href={rec.videoUrl}
+                        download={rec.isLocalFile ? (rec.fileName || 'lecture_video.mp4') : undefined}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800"
                       >
                         <Play className="w-3.5 h-3.5 fill-blue-600" />
-                        <span>Watch Video</span>
+                        <span>{rec.isLocalFile ? 'Download / Play Video' : 'Watch Stream'}</span>
                       </a>
                     ) : <span />}
 
                     <button
-                      onClick={() => {
-                        setRecordingModalSession(session);
-                        if (rec) {
-                          setRecordingForm({
-                            videoUrl: rec.videoUrl || '',
-                            duration: rec.duration || '2h 15m',
-                            summary: rec.summary || '',
-                            topics: (rec.topics || []).join(', ')
-                          });
-                        } else {
-                          setRecordingForm({ videoUrl: '', duration: '2h 15m', summary: '', topics: '' });
-                        }
-                      }}
+                      onClick={() => openRecordingModal(session)}
                       className="px-3 py-1.5 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                     >
-                      {rec ? 'Edit Recording' : '+ Upload Recording'}
+                      {rec ? 'Edit Recording' : '+ Add Recording'}
                     </button>
                   </div>
                 </div>
@@ -855,7 +1035,6 @@ export default function InstructorPortal() {
           ========================================================================= */}
       {activePage === 'assignments' && (
         <div className="space-y-6">
-          {/* Page Header */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -865,21 +1044,12 @@ export default function InstructorPortal() {
               </div>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Assignments & Practical Tasks</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Assign coding tasks, review submissions, and manage grading deadlines for this cohort.
+                Assign coding tasks, upload exercise files from device, and choose target session.
               </p>
             </div>
 
             <button
-              onClick={() => {
-                const targetSession = allSessions[0] || null;
-                setAssignmentModalSession(targetSession);
-                setAssignmentForm({
-                  title: 'New Coding Assignment',
-                  description: '',
-                  dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-                  maxPoints: 100
-                });
-              }}
+              onClick={() => openAssignmentModal()}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -914,6 +1084,21 @@ export default function InstructorPortal() {
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                       {assignment.description || 'No detailed instructions provided.'}
                     </p>
+
+                    {assignment.attachmentUrl && (
+                      <div className="mt-3">
+                        <a
+                          href={assignment.attachmentUrl}
+                          download={assignment.attachmentName || 'assignment_attachment'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold border border-indigo-200 transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download File: {assignment.attachmentName || 'Task Attachment'} ({assignment.attachmentSize || ''})</span>
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
@@ -937,7 +1122,6 @@ export default function InstructorPortal() {
           ========================================================================= */}
       {activePage === 'materials' && (
         <div className="space-y-6">
-          {/* Page Header */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -947,31 +1131,25 @@ export default function InstructorPortal() {
               </div>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Learning Materials & Slide Decks</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Attach GitHub repositories, starter code, PDF cheat sheets, and presentation slides.
+                Upload local code repositories, PDFs, and slide decks from your device or attach web links.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  setMaterialModalSession(allSessions[0] || null);
-                  setMaterialForm({ title: 'Course Code Repository', type: 'code', url: '', description: '', size: '2 MB' });
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                onClick={() => openMaterialModal()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Material</span>
+                <span>+ Upload Material</span>
               </button>
 
               <button
-                onClick={() => {
-                  setPresentationModalSession(allSessions[0] || null);
-                  setPresentationForm({ title: 'Lecture Slide Deck', slidesUrl: '', slideCount: 40 });
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                onClick={() => openPresentationModal()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
               >
                 <Presentation className="w-4 h-4" />
-                <span>+ Slides</span>
+                <span>+ Upload Slides</span>
               </button>
             </div>
           </div>
@@ -982,7 +1160,7 @@ export default function InstructorPortal() {
               <FolderDown className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <h3 className="text-base font-bold text-slate-800">No Materials Attached Yet</h3>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Attach slides, starter code repos, or lecture notes so students can download them.
+                Upload files or attach slides so students can download them from the portal.
               </p>
             </div>
           ) : (
@@ -1011,17 +1189,21 @@ export default function InstructorPortal() {
 
                     <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                       <span className="text-[11px] font-mono text-slate-400">
-                        {isPresentation ? `${mat.slideCount} slides` : (mat.size || 'Web Link')}
+                        {isPresentation 
+                          ? `${mat.slideCount} slides ${mat.isLocalFile ? '• 📁 Device File' : ''}` 
+                          : `${mat.size || 'File'} ${mat.isLocalFile ? '• 📁 Device File' : ''}`
+                        }
                       </span>
 
                       <a
                         href={isPresentation ? mat.slidesUrl : mat.url}
+                        download={mat.isLocalFile ? (mat.fileName || mat.title) : undefined}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800"
                       >
-                        <span>Open Resource</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>{mat.isLocalFile ? 'Download File' : 'Open Resource'}</span>
+                        {mat.isLocalFile ? <Download className="w-3.5 h-3.5" /> : <ExternalLink className="w-3.5 h-3.5" />}
                       </a>
                     </div>
                   </div>
@@ -1037,7 +1219,6 @@ export default function InstructorPortal() {
           ========================================================================= */}
       {activePage === 'roster' && (
         <div className="space-y-6">
-          {/* Page Header */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -1061,7 +1242,6 @@ export default function InstructorPortal() {
             </button>
           </div>
 
-          {/* Students Roster Table */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -1226,30 +1406,102 @@ export default function InstructorPortal() {
         </div>
       )}
 
-      {/* MODAL 2: ADD/EDIT RECORDING */}
-      {recordingModalSession && (
+      {/* MODAL 2: ADD/EDIT RECORDING (WITH SESSION SELECTOR & LOCAL FILE UPLOAD) */}
+      {recordingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             <h3 className="text-base font-bold text-slate-900">
-              Attach Video Recording: Session {recordingModalSession.sessionNumber}
+              Attach Video Lecture Recording
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">This recording will appear in the student's Recorded Lectures page.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Select session number and upload local video file or provide link.</p>
 
-            <form onSubmit={handleSaveRecording} className="mt-4 space-y-3 text-xs">
+            <form onSubmit={handleSaveRecording} className="mt-4 space-y-3.5 text-xs">
+              {/* Target Session Selector */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Video Stream / YouTube URL</label>
-                <input
-                  type="url"
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Target Session (رقم المحاضرة)</span>
+                  <span className="text-[11px] font-mono text-blue-600 font-bold">
+                    Session #{allSessions.find(s => s.id === recordingTargetSessionId)?.sessionNumber || ''}
+                  </span>
+                </label>
+                <select
                   required
-                  value={recordingForm.videoUrl}
-                  onChange={(e) => setRecordingForm({ ...recordingForm, videoUrl: e.target.value })}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+                  value={recordingTargetSessionId}
+                  onChange={(e) => setRecordingTargetSessionId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">-- Choose Session Number --</option>
+                  {allSessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      Session {s.sessionNumber}: {s.title} ({s.date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Source Switcher */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1.5">Video Source (مصدر الفيديو)</label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecordingForm(prev => ({ ...prev, source: 'file' }))}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      recordingForm.source === 'file' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Upload Local File</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecordingForm(prev => ({ ...prev, source: 'url' }))}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      recordingForm.source === 'url' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Web / Stream URL</span>
+                  </button>
+                </div>
+
+                {recordingForm.source === 'file' ? (
+                  <div className="p-4 border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl bg-slate-50/50 text-center space-y-2 transition-colors cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept="video/*,.mp4,.webm,.mov,.mkv"
+                      onChange={handleRecordingFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <UploadCloud className="w-8 h-8 text-blue-600 mx-auto" />
+                    {recordingForm.fileName ? (
+                      <div className="p-2 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-semibold flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="truncate">{recordingForm.fileName} ({recordingForm.fileSize})</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-bold text-slate-700">Choose video file from your device</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">MP4, WebM, MOV, or MKV</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="url"
+                      required={recordingForm.source === 'url'}
+                      value={recordingForm.videoUrl}
+                      onChange={(e) => setRecordingForm({ ...recordingForm, videoUrl: e.target.value, isLocalFile: false })}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Duration</label>
+                <label className="block font-semibold text-slate-700 mb-1">Duration (مدة المحاضرة)</label>
                 <input
                   type="text"
                   value={recordingForm.duration}
@@ -1284,7 +1536,7 @@ export default function InstructorPortal() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setRecordingModalSession(null)}
+                  onClick={() => setRecordingModalOpen(false)}
                   className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 cursor-pointer"
                 >
                   Cancel
@@ -1303,16 +1555,39 @@ export default function InstructorPortal() {
         </div>
       )}
 
-      {/* MODAL 3: ADD ASSIGNMENT */}
-      {assignmentModalSession && (
+      {/* MODAL 3: ADD ASSIGNMENT (WITH SESSION SELECTOR & ATTACHMENT FROM DEVICE) */}
+      {assignmentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             <h3 className="text-base font-bold text-slate-900">
-              Create Assignment for Session {assignmentModalSession.sessionNumber}
+              Create Assignment & Homework Task
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Students can submit their GitHub / Live link under Assignments.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Specify session number, requirements, and attach exercise file.</p>
 
-            <form onSubmit={handleSaveAssignment} className="mt-4 space-y-3 text-xs">
+            <form onSubmit={handleSaveAssignment} className="mt-4 space-y-3.5 text-xs">
+              {/* Target Session Selector */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Target Session (رقم المحاضرة)</span>
+                  <span className="text-[11px] font-mono text-blue-600 font-bold">
+                    Session #{allSessions.find(s => s.id === assignmentTargetSessionId)?.sessionNumber || ''}
+                  </span>
+                </label>
+                <select
+                  required
+                  value={assignmentTargetSessionId}
+                  onChange={(e) => setAssignmentTargetSessionId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">-- Choose Session Number --</option>
+                  {allSessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      Session {s.sessionNumber}: {s.title} ({s.date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Assignment Title</label>
                 <input
@@ -1334,6 +1609,33 @@ export default function InstructorPortal() {
                   placeholder="Describe the deliverables, rubric, and submission requirements..."
                   className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Optional File Attachment from Device */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Attach Task Starter File (ملف من الجهاز - اختياري)</span>
+                  <span className="text-[10px] text-slate-400">PDF, ZIP, DOCX, Code</span>
+                </label>
+                <div className="p-3 border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl bg-slate-50/50 text-center space-y-1.5 transition-colors cursor-pointer relative">
+                  <input
+                    type="file"
+                    onChange={handleAssignmentFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <FileUp className="w-6 h-6 text-indigo-600 mx-auto" />
+                  {assignmentForm.attachmentName ? (
+                    <div className="p-2 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-semibold flex items-center justify-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="truncate">{assignmentForm.attachmentName} ({assignmentForm.attachmentSize})</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xs font-bold text-slate-700">Choose assignment file from device</p>
+                      <p className="text-[10px] text-slate-400">Starter code ZIP, PDF guide, or task description</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -1361,7 +1663,7 @@ export default function InstructorPortal() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setAssignmentModalSession(null)}
+                  onClick={() => setAssignmentModalOpen(false)}
                   className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 cursor-pointer"
                 >
                   Cancel
@@ -1380,16 +1682,99 @@ export default function InstructorPortal() {
         </div>
       )}
 
-      {/* MODAL 4: ATTACH MATERIAL */}
-      {materialModalSession && (
+      {/* MODAL 4: ATTACH MATERIAL (WITH SESSION SELECTOR & DEVICE FILE UPLOAD) */}
+      {materialModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             <h3 className="text-base font-bold text-slate-900">
-              Attach Material for Session {materialModalSession.sessionNumber}
+              Attach Learning Material
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Link a code repository, GitHub URL, or reference document.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Select session number and upload file from device or provide web link.</p>
 
-            <form onSubmit={handleSaveMaterial} className="mt-4 space-y-3 text-xs">
+            <form onSubmit={handleSaveMaterial} className="mt-4 space-y-3.5 text-xs">
+              {/* Target Session Selector */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Target Session (رقم المحاضرة)</span>
+                  <span className="text-[11px] font-mono text-blue-600 font-bold">
+                    Session #{allSessions.find(s => s.id === materialTargetSessionId)?.sessionNumber || ''}
+                  </span>
+                </label>
+                <select
+                  required
+                  value={materialTargetSessionId}
+                  onChange={(e) => setMaterialTargetSessionId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">-- Choose Session Number --</option>
+                  {allSessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      Session {s.sessionNumber}: {s.title} ({s.date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Source Switcher */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1.5">Material Source (مصدر الملف)</label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setMaterialForm(prev => ({ ...prev, source: 'file' }))}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      materialForm.source === 'file' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Upload Local File</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMaterialForm(prev => ({ ...prev, source: 'url' }))}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      materialForm.source === 'url' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>External URL / Repo</span>
+                  </button>
+                </div>
+
+                {materialForm.source === 'file' ? (
+                  <div className="p-4 border-2 border-dashed border-slate-300 hover:border-purple-500 rounded-2xl bg-slate-50/50 text-center space-y-2 transition-colors cursor-pointer relative">
+                    <input
+                      type="file"
+                      onChange={handleMaterialFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <FolderDown className="w-8 h-8 text-purple-600 mx-auto" />
+                    {materialForm.fileName ? (
+                      <div className="p-2 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-semibold flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="truncate">{materialForm.fileName} ({materialForm.size})</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-bold text-slate-700">Choose file from your device</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">ZIP, PDF, DOCX, Code, or Notes</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="url"
+                      required={materialForm.source === 'url'}
+                      value={materialForm.url}
+                      onChange={(e) => setMaterialForm({ ...materialForm, url: e.target.value, isLocalFile: false })}
+                      placeholder="https://github.com/..."
+                      className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Material Title</label>
                 <input
@@ -1402,21 +1787,9 @@ export default function InstructorPortal() {
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Resource URL</label>
-                <input
-                  type="url"
-                  required
-                  value={materialForm.url}
-                  onChange={(e) => setMaterialForm({ ...materialForm, url: e.target.value })}
-                  placeholder="https://github.com/..."
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Type</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Category Type</label>
                   <select
                     value={materialForm.type}
                     onChange={(e) => setMaterialForm({ ...materialForm, type: e.target.value })}
@@ -1425,10 +1798,11 @@ export default function InstructorPortal() {
                     <option value="code">Code Repository</option>
                     <option value="doc">Documentation / PDF</option>
                     <option value="notes">Lecture Notes</option>
+                    <option value="cheatsheet">Cheat Sheet</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Size / Format</label>
+                  <label className="block font-semibold text-slate-700 mb-1">File Size / Label</label>
                   <input
                     type="text"
                     value={materialForm.size}
@@ -1442,7 +1816,7 @@ export default function InstructorPortal() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setMaterialModalSession(null)}
+                  onClick={() => setMaterialModalOpen(false)}
                   className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 cursor-pointer"
                 >
                   Cancel
@@ -1461,16 +1835,100 @@ export default function InstructorPortal() {
         </div>
       )}
 
-      {/* MODAL 5: ATTACH PRESENTATION SLIDES */}
-      {presentationModalSession && (
+      {/* MODAL 5: ATTACH PRESENTATION SLIDES (WITH SESSION SELECTOR & DEVICE FILE UPLOAD) */}
+      {presentationModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             <h3 className="text-base font-bold text-slate-900">
-              Attach Slides for Session {presentationModalSession.sessionNumber}
+              Attach Slide Presentation Deck
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Link Google Slides, Canva, or PDF presentation deck.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Select session number and upload slides from device or provide web link.</p>
 
-            <form onSubmit={handleSavePresentation} className="mt-4 space-y-3 text-xs">
+            <form onSubmit={handleSavePresentation} className="mt-4 space-y-3.5 text-xs">
+              {/* Target Session Selector */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Target Session (رقم المحاضرة)</span>
+                  <span className="text-[11px] font-mono text-blue-600 font-bold">
+                    Session #{allSessions.find(s => s.id === presentationTargetSessionId)?.sessionNumber || ''}
+                  </span>
+                </label>
+                <select
+                  required
+                  value={presentationTargetSessionId}
+                  onChange={(e) => setPresentationTargetSessionId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-bold text-slate-900 bg-slate-50 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">-- Choose Session Number --</option>
+                  {allSessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      Session {s.sessionNumber}: {s.title} ({s.date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Source Switcher */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1.5">Slides Source (مصدر السلايدات)</label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setPresentationForm(prev => ({ ...prev, source: 'file' }))}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      presentationForm.source === 'file' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Upload Local File</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPresentationForm(prev => ({ ...prev, source: 'url' }))}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      presentationForm.source === 'url' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Google Slides / Link</span>
+                  </button>
+                </div>
+
+                {presentationForm.source === 'file' ? (
+                  <div className="p-4 border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-2xl bg-slate-50/50 text-center space-y-2 transition-colors cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept=".pdf,.ppt,.pptx,.key"
+                      onChange={handlePresentationFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Presentation className="w-8 h-8 text-amber-600 mx-auto" />
+                    {presentationForm.fileName ? (
+                      <div className="p-2 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-semibold flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="truncate">{presentationForm.fileName} ({presentationForm.fileSize})</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-bold text-slate-700">Choose slides file from your device</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">PDF, PPTX, or Keynote presentation</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="url"
+                      required={presentationForm.source === 'url'}
+                      value={presentationForm.slidesUrl}
+                      onChange={(e) => setPresentationForm({ ...presentationForm, slidesUrl: e.target.value, isLocalFile: false })}
+                      placeholder="https://docs.google.com/presentation/d/..."
+                      className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Presentation Title</label>
                 <input
@@ -1480,18 +1938,6 @@ export default function InstructorPortal() {
                   onChange={(e) => setPresentationForm({ ...presentationForm, title: e.target.value })}
                   placeholder="e.g. Chapter 4: Cloud Infrastructure & CI/CD"
                   className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Slides URL</label>
-                <input
-                  type="url"
-                  required
-                  value={presentationForm.slidesUrl}
-                  onChange={(e) => setPresentationForm({ ...presentationForm, slidesUrl: e.target.value })}
-                  placeholder="https://docs.google.com/presentation/d/..."
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -1508,7 +1954,7 @@ export default function InstructorPortal() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setPresentationModalSession(null)}
+                  onClick={() => setPresentationModalOpen(false)}
                   className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 cursor-pointer"
                 >
                   Cancel
