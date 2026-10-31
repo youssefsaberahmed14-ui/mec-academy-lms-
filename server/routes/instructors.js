@@ -340,4 +340,211 @@ router.get('/group/:groupId/export-excel', requireInstructor, (req, res) => {
   res.send(buffer);
 });
 
+// ==========================================
+// SESSION & CONTENT CREATION BY INSTRUCTOR
+// ==========================================
+
+// POST /api/instructor/group/:groupId/sessions
+// Add new session to group
+router.post('/group/:groupId/sessions', requireInstructor, (req, res) => {
+  const { groupId } = req.params;
+  const group = db.getGroupById(groupId);
+  if (!group) return res.status(404).json({ error: 'Group not found' });
+
+  if (group.instructorId !== req.instructor.id) {
+    return res.status(403).json({ error: 'Unauthorized to add sessions to this group' });
+  }
+
+  const { title, sessionNumber, date, startTime, endTime, status } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Session title is required' });
+  }
+
+  try {
+    const newSession = db.createSession({
+      groupId,
+      title: title.trim(),
+      sessionNumber: sessionNumber ? Number(sessionNumber) : undefined,
+      date: date || new Date().toISOString().split('T')[0],
+      startTime: startTime || '18:00',
+      endTime: endTime || '21:00',
+      status: status || 'scheduled'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Session ${newSession.sessionNumber} added successfully`,
+      session: newSession
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// PUT /api/instructor/session/:sessionId
+// Edit session title, date, status ('held' / 'scheduled')
+router.put('/session/:sessionId', requireInstructor, (req, res) => {
+  const { sessionId } = req.params;
+  const session = db.getSessionById(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const group = db.getGroupById(session.groupId);
+  if (group.instructorId !== req.instructor.id) {
+    return res.status(403).json({ error: 'Unauthorized to edit this session' });
+  }
+
+  const updates = req.body;
+  const updated = db.updateSession(sessionId, updates);
+
+  res.json({
+    success: true,
+    message: 'Session updated successfully',
+    session: updated
+  });
+});
+
+// POST /api/instructor/session/:sessionId/recording
+// Add or update video recording
+router.post('/session/:sessionId/recording', requireInstructor, (req, res) => {
+  const { sessionId } = req.params;
+  const session = db.getSessionById(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const group = db.getGroupById(session.groupId);
+  if (group.instructorId !== req.instructor.id) {
+    return res.status(403).json({ error: 'Unauthorized to edit this session' });
+  }
+
+  const { videoUrl, duration, summary, topics } = req.body;
+  if (!videoUrl) {
+    return res.status(400).json({ error: 'Video stream URL is required' });
+  }
+
+  try {
+    const recording = db.setSessionRecording(sessionId, {
+      videoUrl: videoUrl.trim(),
+      duration: duration || '2h 00m',
+      summary: summary || '',
+      topics
+    });
+
+    // If adding recording, also ensure session is marked as held
+    db.updateSession(sessionId, { status: 'held' });
+
+    res.json({
+      success: true,
+      message: 'Session recording published successfully! It is now visible to all enrolled students.',
+      recording
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/instructor/session/:sessionId/assignments
+// Add an assignment to a session
+router.post('/session/:sessionId/assignments', requireInstructor, (req, res) => {
+  const { sessionId } = req.params;
+  const session = db.getSessionById(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const group = db.getGroupById(session.groupId);
+  if (group.instructorId !== req.instructor.id) {
+    return res.status(403).json({ error: 'Unauthorized to add assignments to this session' });
+  }
+
+  const { title, description, dueDate, maxPoints, attachmentUrl } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Assignment title is required' });
+  }
+
+  try {
+    const newAsgn = db.addAssignmentToSession(sessionId, {
+      title: title.trim(),
+      description: description || '',
+      dueDate: dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      maxPoints: Number(maxPoints) || 100,
+      attachmentUrl: attachmentUrl || ''
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Assignment "${newAsgn.title}" created successfully and published to students.`,
+      assignment: newAsgn
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/instructor/session/:sessionId/materials
+// Add instructor materials (code files, PDFs, guides)
+router.post('/session/:sessionId/materials', requireInstructor, (req, res) => {
+  const { sessionId } = req.params;
+  const session = db.getSessionById(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const group = db.getGroupById(session.groupId);
+  if (group.instructorId !== req.instructor.id) {
+    return res.status(403).json({ error: 'Unauthorized to add materials to this session' });
+  }
+
+  const { title, type, url, description, size } = req.body;
+  if (!title || !url) {
+    return res.status(400).json({ error: 'Material title and resource URL are required' });
+  }
+
+  try {
+    const newMat = db.addMaterialToSession(sessionId, {
+      title: title.trim(),
+      type: type || 'code',
+      url: url.trim(),
+      description: description || '',
+      size: size || '1.5 MB'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Material "${newMat.title}" attached to Session ${session.sessionNumber}.`,
+      material: newMat
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/instructor/session/:sessionId/presentations
+// Add presentation slide deck
+router.post('/session/:sessionId/presentations', requireInstructor, (req, res) => {
+  const { sessionId } = req.params;
+  const session = db.getSessionById(sessionId);
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  const group = db.getGroupById(session.groupId);
+  if (group.instructorId !== req.instructor.id) {
+    return res.status(403).json({ error: 'Unauthorized to add presentations to this session' });
+  }
+
+  const { title, slidesUrl, slideCount } = req.body;
+  if (!title || !slidesUrl) {
+    return res.status(400).json({ error: 'Presentation title and slides URL are required' });
+  }
+
+  try {
+    const newPres = db.addPresentationToSession(sessionId, {
+      title: title.trim(),
+      slidesUrl: slidesUrl.trim(),
+      slideCount: Number(slideCount) || 30
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Presentation deck "${newPres.title}" published to Session ${session.sessionNumber}.`,
+      presentation: newPres
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

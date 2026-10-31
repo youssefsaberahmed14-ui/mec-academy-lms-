@@ -235,6 +235,107 @@ class Database {
     return this.data.sessions[index];
   }
 
+  createSession(sessionData) {
+    const groupSessions = this.getSessionsByGroup(sessionData.groupId);
+    const sessionNumber = Number(sessionData.sessionNumber) || (groupSessions.length + 1);
+    const id = `sess_${sessionData.groupId.slice(-6)}_${Date.now()}`;
+    const token = `MEC-QR-S${sessionNumber}-${id.slice(-4)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const newSession = {
+      id,
+      groupId: sessionData.groupId,
+      sessionNumber,
+      title: sessionData.title || `Session ${sessionNumber}`,
+      date: sessionData.date || new Date().toISOString().split('T')[0],
+      startTime: sessionData.startTime || '18:00',
+      endTime: sessionData.endTime || '21:00',
+      status: sessionData.status || 'scheduled',
+      qrCodeToken: token,
+      recordedSession: sessionData.recordedSession || null,
+      assignments: sessionData.assignments || [],
+      instructorMaterials: sessionData.instructorMaterials || [],
+      presentations: sessionData.presentations || []
+    };
+
+    this.data.sessions.push(newSession);
+    this.save();
+    return newSession;
+  }
+
+  addAssignmentToSession(sessionId, assignmentData) {
+    const session = this.getSessionById(sessionId);
+    if (!session) throw new Error('Session not found');
+
+    if (!session.assignments) session.assignments = [];
+    const newAsgn = {
+      id: `asgn_${Date.now()}`,
+      title: assignmentData.title,
+      description: assignmentData.description || '',
+      dueDate: assignmentData.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+      maxPoints: Number(assignmentData.maxPoints) || 100,
+      attachmentUrl: assignmentData.attachmentUrl || ''
+    };
+
+    session.assignments.push(newAsgn);
+    this.save();
+    return newAsgn;
+  }
+
+  addMaterialToSession(sessionId, materialData) {
+    const session = this.getSessionById(sessionId);
+    if (!session) throw new Error('Session not found');
+
+    if (!session.instructorMaterials) session.instructorMaterials = [];
+    const newMat = {
+      id: `mat_${Date.now()}`,
+      title: materialData.title,
+      type: materialData.type || 'code',
+      url: materialData.url,
+      description: materialData.description || '',
+      size: materialData.size || '1.5 MB'
+    };
+
+    session.instructorMaterials.push(newMat);
+    this.save();
+    return newMat;
+  }
+
+  addPresentationToSession(sessionId, presentationData) {
+    const session = this.getSessionById(sessionId);
+    if (!session) throw new Error('Session not found');
+
+    if (!session.presentations) session.presentations = [];
+    const newPres = {
+      id: `pres_${Date.now()}`,
+      title: presentationData.title,
+      slidesUrl: presentationData.slidesUrl,
+      slideCount: Number(presentationData.slideCount) || 30
+    };
+
+    session.presentations.push(newPres);
+    this.save();
+    return newPres;
+  }
+
+  setSessionRecording(sessionId, recordingData) {
+    const session = this.getSessionById(sessionId);
+    if (!session) throw new Error('Session not found');
+
+    const topics = Array.isArray(recordingData.topics)
+      ? recordingData.topics
+      : (recordingData.topics ? String(recordingData.topics).split(',').map(t => t.trim()).filter(Boolean) : []);
+
+    session.recordedSession = {
+      videoUrl: recordingData.videoUrl,
+      duration: recordingData.duration || '2h 00m',
+      summary: recordingData.summary || '',
+      topics
+    };
+
+    this.save();
+    return session.recordedSession;
+  }
+
   // --- Attendance ---
   getAttendanceForStudent(studentId, groupId) {
     return this.data.attendanceRecords.filter(a => a.studentId === studentId && (!groupId || a.groupId === groupId));
