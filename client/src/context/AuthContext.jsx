@@ -11,12 +11,12 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('mec_token') || null);
   const [loading, setLoading] = useState(false);
 
-  const login = async ({ email, role, accessPath = 'learner' }) => {
+  const login = async ({ email, password, role, accessPath = 'learner' }) => {
     setLoading(true);
     try {
       const data = await apiRequest('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, role, accessPath })
+        body: JSON.stringify({ email, password, role, accessPath })
       });
       setUser(data.user);
       setToken(data.token);

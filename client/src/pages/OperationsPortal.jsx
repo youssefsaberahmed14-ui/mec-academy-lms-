@@ -60,6 +60,7 @@ export default function OperationsPortal() {
     name: '',
     email: '',
     role: 'student',
+    password: 'Mec@2026',
     phone: '',
     specialization: ''
   });
@@ -845,6 +846,22 @@ export default function OperationsPortal() {
                   onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                   placeholder="e.g. ziad.mansour@mec.edu"
                   className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Initial Account Password</label>
+                  <span className="text-[10px] text-amber-700 font-medium">User can change it after login</span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  minLength={6}
+                  value={userForm.password}
+                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                  placeholder="e.g. Mec@2026"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl font-mono text-indigo-900 font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none"
                 />
               </div>
 

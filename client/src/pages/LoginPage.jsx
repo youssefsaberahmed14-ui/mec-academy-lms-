@@ -6,81 +6,51 @@ import {
   Compass, 
   ArrowRight, 
   ShieldCheck, 
-  KeyRound, 
   AlertCircle,
   Sparkles,
-  CheckCircle2
+  Eye,
+  EyeOff,
+  Lock,
+  KeyRound,
+  Info
 } from 'lucide-react';
 
 export default function LoginPage({ onNavigate }) {
-  const { login, demoLogin, loading } = useAuth();
+  const { login, loading } = useAuth();
 
-  // Three separate states for each section
+  // Three separate states for each role section
   const [studentEmail, setStudentEmail] = useState('');
-  const [instructorEmail, setInstructorEmail] = useState('');
-  const [mentorEmail, setMentorEmail] = useState('');
-
+  const [studentPassword, setStudentPassword] = useState('');
+  const [showStudentPass, setShowStudentPass] = useState(false);
   const [errorStudent, setErrorStudent] = useState('');
+
+  const [instructorEmail, setInstructorEmail] = useState('');
+  const [instructorPassword, setInstructorPassword] = useState('');
+  const [showInstructorPass, setShowInstructorPass] = useState(false);
   const [errorInstructor, setErrorInstructor] = useState('');
+
+  const [mentorEmail, setMentorEmail] = useState('');
+  const [mentorPassword, setMentorPassword] = useState('');
+  const [showMentorPass, setShowMentorPass] = useState(false);
   const [errorMentor, setErrorMentor] = useState('');
 
-  // Pre-configured demo accounts
-  const demoAccounts = {
-    student: {
-      id: "usr_stu_1",
-      name: "Omar Tarek",
-      email: "omar.tarek@student.mec.edu",
-      role: "student",
-      avatar: "OT",
-      phone: "+20 100 482 9101",
-      department: "Cohort Alpha (Full Stack)"
-    },
-    student2: {
-      id: "usr_stu_2",
-      name: "Sarah Mansour",
-      email: "sarah.mansour@student.mec.edu",
-      role: "student",
-      avatar: "SM",
-      phone: "+20 101 883 4521",
-      department: "Cohort Alpha (Full Stack)"
-    },
-    instructor: {
-      id: "usr_inst_1",
-      name: "Dr. Tarek Ezzat",
-      email: "tarek.ezzat@mec.edu",
-      role: "instructor",
-      avatar: "TE",
-      phone: "+20 100 223 9988",
-      department: "Lead Engineering Faculty"
-    },
-    mentor: {
-      id: "usr_men_1",
-      name: "Ahmed Fathy",
-      email: "ahmed.fathy@mec.edu",
-      role: "mentor",
-      avatar: "AF",
-      phone: "+20 109 334 5511",
-      department: "Full Stack Mentor"
-    }
-  };
-
-  const handleRoleLogin = async (e, role, email, setError) => {
+  const handleRoleLogin = async (e, role, email, password, setError) => {
     e.preventDefault();
     setError('');
-    if (!email) {
-      setError('Please provide an email address.');
+    if (!email || !password) {
+      setError('Please provide both your registered email and account password.');
       return;
     }
 
     try {
       await login({
-        email,
+        email: email.trim(),
+        password: password.trim(),
         role,
         accessPath: 'learner'
       });
-      // Navigation is triggered automatically via AuthContext in App.jsx
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message || 'Authentication failed. Please verify your credentials.');
     }
   };
 
@@ -90,7 +60,7 @@ export default function LoginPage({ onNavigate }) {
       {/* Top Banner with Staff Access Link */}
       <div className="bg-slate-900 text-slate-300 px-4 py-2.5 text-xs text-center flex items-center justify-center gap-3 border-b border-slate-800">
         <span className="inline-flex items-center gap-1.5 text-amber-300 font-semibold">
-          <ShieldCheck className="w-3.5 h-3.5" /> Operations & Academic Supervisor
+          <ShieldCheck className="w-3.5 h-3.5" /> Operations Staff & Academic Supervisor
         </span>
         <span className="hidden sm:inline text-slate-500">|</span>
         <span className="hidden sm:inline">Academy leadership and operations staff access through a segregated path:</span>
@@ -98,7 +68,7 @@ export default function LoginPage({ onNavigate }) {
           onClick={() => onNavigate('/admin')}
           className="underline font-bold text-white hover:text-indigo-300 inline-flex items-center gap-1 cursor-pointer transition-colors"
         >
-          Go to Staff & Supervisor Portal &rarr;
+          Staff & Supervisor Access &rarr;
         </button>
       </div>
 
@@ -108,13 +78,13 @@ export default function LoginPage({ onNavigate }) {
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-3 shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            MEC ACADEMY • UNIFIED LEARNER PORTALS
+            MEC ACADEMY • SECURE LEARNER PORTALS
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             Select Your Role to Access Portal
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Log in directly through your designated role section. Each section strictly authenticates into that role's portal and pages.
+            Sign in with your registered academy credentials. Each section strictly authenticates into that role's portal and pages.
           </p>
         </div>
 
@@ -140,7 +110,7 @@ export default function LoginPage({ onNavigate }) {
 
               <h2 className="text-xl font-bold text-slate-900">Student Portal</h2>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Review dynamic attendance ("X of Y sessions attended"), scan instructor QR codes to check in, and access grouped session materials & assignments.
+                Review dynamic attendance ("X of Y sessions attended"), scan instructor QR codes to check in, and access course deliverables.
               </p>
 
               {/* Error message */}
@@ -152,13 +122,14 @@ export default function LoginPage({ onNavigate }) {
               )}
 
               {/* Form */}
-              <form onSubmit={(e) => handleRoleLogin(e, 'student', studentEmail, setErrorStudent)} className="mt-5 space-y-3">
+              <form onSubmit={(e) => handleRoleLogin(e, 'student', studentEmail, studentPassword, setErrorStudent)} className="mt-5 space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Student Email Address
                   </label>
                   <input
                     type="email"
+                    required
                     value={studentEmail}
                     onChange={(e) => setStudentEmail(e.target.value)}
                     placeholder="e.g. omar.tarek@student.mec.edu"
@@ -168,66 +139,41 @@ export default function LoginPage({ onNavigate }) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Password
+                    Account Password
                   </label>
-                  <input
-                    type="password"
-                    defaultValue="••••••••••••"
-                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showStudentPass ? "text" : "password"}
+                      required
+                      value={studentPassword}
+                      onChange={(e) => setStudentPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full px-3.5 py-2.5 pr-10 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStudentPass(!showStudentPass)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showStudentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm shadow-emerald-200 flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm shadow-emerald-200 flex items-center justify-center gap-1.5 cursor-pointer mt-2"
                 >
-                  <span>Authenticate as Student</span>
+                  <span>Sign In as Student</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             </div>
 
-            {/* Quick Demo Logins */}
-            <div className="mt-6 pt-5 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                Fast 1-Click Demo Accounts
-              </span>
-              <div className="space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => demoLogin(demoAccounts.student)}
-                  className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center justify-between text-xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
-                      OT
-                    </span>
-                    <div>
-                      <span className="font-semibold text-slate-800 block">Omar Tarek</span>
-                      <span className="text-[10px] text-slate-500 font-mono">12 of 15 attended (Cohort Alpha)</span>
-                    </div>
-                  </div>
-                  <span className="text-emerald-700 font-bold text-[11px]">Login &rarr;</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => demoLogin(demoAccounts.student2)}
-                  className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-300 transition-all flex items-center justify-between text-xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-full bg-teal-600 text-white text-[10px] font-bold flex items-center justify-center">
-                      SM
-                    </span>
-                    <div>
-                      <span className="font-semibold text-slate-800 block">Sarah Mansour</span>
-                      <span className="text-[10px] text-slate-500 font-mono">14 of 15 attended</span>
-                    </div>
-                  </div>
-                  <span className="text-emerald-700 font-bold text-[11px]">Login &rarr;</span>
-                </button>
-              </div>
+            <div className="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Password can be changed inside your portal anytime.</span>
             </div>
 
           </div>
@@ -252,7 +198,7 @@ export default function LoginPage({ onNavigate }) {
 
               <h2 className="text-xl font-bold text-slate-900">Instructor Portal</h2>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Generate real-time session QR codes for instant check-in and export comprehensive group Excel gradebooks with attendance, assignments & quizzes.
+                Generate real-time session QR codes for instant check-in and export comprehensive group Excel gradebooks with attendance & quizzes.
               </p>
 
               {/* Error message */}
@@ -264,13 +210,14 @@ export default function LoginPage({ onNavigate }) {
               )}
 
               {/* Form */}
-              <form onSubmit={(e) => handleRoleLogin(e, 'instructor', instructorEmail, setErrorInstructor)} className="mt-5 space-y-3">
+              <form onSubmit={(e) => handleRoleLogin(e, 'instructor', instructorEmail, instructorPassword, setErrorInstructor)} className="mt-5 space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Instructor Email Address
                   </label>
                   <input
                     type="email"
+                    required
                     value={instructorEmail}
                     onChange={(e) => setInstructorEmail(e.target.value)}
                     placeholder="e.g. tarek.ezzat@mec.edu"
@@ -280,49 +227,41 @@ export default function LoginPage({ onNavigate }) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Password
+                    Account Password
                   </label>
-                  <input
-                    type="password"
-                    defaultValue="••••••••••••"
-                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showInstructorPass ? "text" : "password"}
+                      required
+                      value={instructorPassword}
+                      onChange={(e) => setInstructorPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full px-3.5 py-2.5 pr-10 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowInstructorPass(!showInstructorPass)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showInstructorPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm shadow-blue-200 flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm shadow-blue-200 flex items-center justify-center gap-1.5 cursor-pointer mt-2"
                 >
-                  <span>Authenticate as Instructor</span>
+                  <span>Sign In as Instructor</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             </div>
 
-            {/* Quick Demo Logins */}
-            <div className="mt-6 pt-5 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                Fast 1-Click Demo Accounts
-              </span>
-              <div className="space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => demoLogin(demoAccounts.instructor)}
-                  className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-300 transition-all flex items-center justify-between text-xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
-                      TE
-                    </span>
-                    <div>
-                      <span className="font-semibold text-slate-800 block">Dr. Tarek Ezzat</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Lead Instructor (Full Stack)</span>
-                    </div>
-                  </div>
-                  <span className="text-blue-700 font-bold text-[11px]">Login &rarr;</span>
-                </button>
-              </div>
+            <div className="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>Password can be changed inside your portal anytime.</span>
             </div>
 
           </div>
@@ -347,7 +286,7 @@ export default function LoginPage({ onNavigate }) {
 
               <h2 className="text-xl font-bold text-slate-900">Mentor Portal</h2>
               <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                Track assigned group cohorts, identify at-risk learners (<span className="text-purple-700 font-semibold">&lt;75% attendance</span>), and provide targeted technical support.
+                Track assigned group cohorts, identify at-risk learners (&lt;75% attendance), and provide targeted technical support.
               </p>
 
               {/* Error message */}
@@ -359,13 +298,14 @@ export default function LoginPage({ onNavigate }) {
               )}
 
               {/* Form */}
-              <form onSubmit={(e) => handleRoleLogin(e, 'mentor', mentorEmail, setErrorMentor)} className="mt-5 space-y-3">
+              <form onSubmit={(e) => handleRoleLogin(e, 'mentor', mentorEmail, mentorPassword, setErrorMentor)} className="mt-5 space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Mentor Email Address
                   </label>
                   <input
                     type="email"
+                    required
                     value={mentorEmail}
                     onChange={(e) => setMentorEmail(e.target.value)}
                     placeholder="e.g. ahmed.fathy@mec.edu"
@@ -375,82 +315,58 @@ export default function LoginPage({ onNavigate }) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Password
+                    Account Password
                   </label>
-                  <input
-                    type="password"
-                    defaultValue="••••••••••••"
-                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showMentorPass ? "text" : "password"}
+                      required
+                      value={mentorPassword}
+                      onChange={(e) => setMentorPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full px-3.5 py-2.5 pr-10 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowMentorPass(!showMentorPass)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showMentorPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm shadow-purple-200 flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                  className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-xs transition-colors shadow-sm shadow-purple-200 flex items-center justify-center gap-1.5 cursor-pointer mt-2"
                 >
-                  <span>Authenticate as Mentor</span>
+                  <span>Sign In as Mentor</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             </div>
 
-            {/* Quick Demo Logins */}
-            <div className="mt-6 pt-5 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                Fast 1-Click Demo Accounts
-              </span>
-              <div className="space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => demoLogin(demoAccounts.mentor)}
-                  className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-purple-50 border border-slate-200/80 hover:border-purple-300 transition-all flex items-center justify-between text-xs cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">
-                      AF
-                    </span>
-                    <div>
-                      <span className="font-semibold text-slate-800 block">Ahmed Fathy</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Lead Mentor (Cohort Alpha)</span>
-                    </div>
-                  </div>
-                  <span className="text-purple-700 font-bold text-[11px]">Login &rarr;</span>
-                </button>
-              </div>
+            <div className="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+              <span>Password can be changed inside your portal anytime.</span>
             </div>
 
           </div>
 
         </div>
 
-        {/* Segregated Access Info Card */}
-        <div className="mt-12 bg-white rounded-2xl p-5 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left shadow-xs">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 bg-slate-100 text-slate-700 rounded-xl">
-              <ShieldCheck className="w-6 h-6 text-indigo-700" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-slate-900">Are you an Operations Staff Member or Academic Supervisor?</h4>
-              <p className="text-xs text-slate-500">
-                Staff administration, course catalog pricing, user enrollment, group linking, and oversight metrics require dedicated staff authentication.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate('/admin')}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors shrink-0 shadow-xs cursor-pointer flex items-center gap-2"
-          >
-            Access Staff Portal
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+        {/* Security Note */}
+        <div className="mt-10 max-w-xl mx-auto p-4 bg-white/80 rounded-2xl border border-slate-200 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+          <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+          <span>Default initial password for seed accounts is <code className="bg-slate-100 text-indigo-800 font-mono font-bold px-1.5 py-0.5 rounded">Mec@2026</code>. You can change it after signing in.</span>
         </div>
 
       </main>
 
       {/* Footer */}
       <footer className="border-t border-slate-200 py-4 bg-white/60 text-center text-xs text-slate-500">
-        <p>© 2026 MEC Academy Learning Management System. Role-separated architecture.</p>
+        <p>© 2026 MEC Academy Learning Management System. Role-separated secure architecture.</p>
       </footer>
 
     </div>

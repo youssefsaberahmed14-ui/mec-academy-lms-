@@ -18,6 +18,12 @@ class Database {
       try {
         const raw = fs.readFileSync(DB_FILE, 'utf8');
         this.data = JSON.parse(raw);
+        // Ensure every user has a password set
+        if (this.data.users) {
+          this.data.users.forEach(u => {
+            if (!u.password) u.password = 'Mec@2026';
+          });
+        }
       } catch (err) {
         console.error('Failed to parse database file, resetting to seed data:', err);
         this.reset();
@@ -27,6 +33,11 @@ class Database {
 
   reset() {
     this.data = JSON.parse(JSON.stringify(seedData));
+    if (this.data.users) {
+      this.data.users.forEach(u => {
+        if (!u.password) u.password = 'Mec@2026';
+      });
+    }
     this.save();
     console.log('Database initialized from seedData.');
   }
@@ -58,12 +69,27 @@ class Database {
     const newUser = {
       id,
       ...userData,
+      password: userData.password ? String(userData.password).trim() : 'Mec@2026',
       status: userData.status || 'active',
       createdAt: new Date().toISOString()
     };
     this.data.users.push(newUser);
     this.save();
     return newUser;
+  }
+
+  updatePassword(id, newPassword) {
+    const user = this.getUserById(id);
+    if (!user) return false;
+    user.password = String(newPassword).trim();
+    this.save();
+    return true;
+  }
+
+  sanitizeUser(user) {
+    if (!user) return null;
+    const { password, ...safeUser } = user;
+    return safeUser;
   }
 
   updateUser(id, updates) {

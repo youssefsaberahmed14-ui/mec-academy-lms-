@@ -2,17 +2,23 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// Login endpoint
+// Login endpoint with password verification
 router.post('/login', (req, res) => {
-  const { email, role, accessPath } = req.body;
+  const { email, password, role, accessPath } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
   }
 
   const user = db.getUserByEmail(email);
   if (!user) {
-    return res.status(401).json({ error: 'No account found with this email' });
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  // Verify password
+  const storedPassword = user.password || 'Mec@2026';
+  if (storedPassword !== String(password).trim()) {
+    return res.status(401).json({ error: 'Invalid email or password' });
   }
 
   // Access path enforcement:
@@ -43,29 +49,45 @@ router.post('/login', (req, res) => {
   // Token / session simulation
   const token = `mec_tok_${user.id}_${Date.now()}`;
 
+  // Sanitize user (never expose password to client)
   res.json({
     token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      avatar: user.avatar,
-      department: user.department || user.specialization || user.expertise || ''
-    }
+    user: db.sanitizeUser(user)
   });
 });
 
-// Demo users grouped for convenience
-router.get('/demo-users', (req, res) => {
-  const users = db.getUsers();
+// Change Password endpoint for all authenticated users
+router.post('/change-password', (req, res) => {
+  const userId = req.headers['x-user-id'];
+  const { currentPassword, newPassword } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current password and new password are required' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+  }
+
+  const user = db.getUserById(userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const actualPassword = user.password || 'Mec@2026';
+  if (actualPassword !== String(currentPassword).trim()) {
+    return res.status(400).json({ error: 'Current password is incorrect' });
+  }
+
+  db.updatePassword(user.id, newPassword);
+
   res.json({
-    students: users.filter(u => u.role === 'student'),
-    instructors: users.filter(u => u.role === 'instructor'),
-    mentors: users.filter(u => u.role === 'mentor'),
-    operations: users.filter(u => u.role === 'operations'),
-    supervisors: users.filter(u => u.role === 'supervisor')
+    success: true,
+    message: 'Password changed successfully! Please use your new password next time you log in.'
   });
 });
 
@@ -79,7 +101,7 @@ router.get('/me', (req, res) => {
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
-  res.json({ user });
+  res.json({ user: db.sanitizeUser(user) });
 });
 
 module.exports = router;

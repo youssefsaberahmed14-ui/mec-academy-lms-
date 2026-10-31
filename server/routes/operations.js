@@ -88,8 +88,9 @@ router.get('/users', requireOpsOrSupervisor, (req, res) => {
     } else if (u.role === 'student') {
       assignedGroupsCount = groups.filter(g => (g.studentIds || []).includes(u.id)).length;
     }
+    const safeUser = db.sanitizeUser(u);
     return {
-      ...u,
+      ...safeUser,
       assignedGroupsCount
     };
   });
@@ -99,7 +100,7 @@ router.get('/users', requireOpsOrSupervisor, (req, res) => {
 
 // POST /api/operations/users
 router.post('/users', requireOpsOrSupervisor, (req, res) => {
-  const { name, email, role, phone, specialization, expertise } = req.body;
+  const { name, email, role, password, phone, specialization, expertise } = req.body;
 
   if (!name || !email || !role) {
     return res.status(400).json({ error: 'Name, email, and valid role are required' });
@@ -117,13 +118,14 @@ router.post('/users', requireOpsOrSupervisor, (req, res) => {
       name,
       email,
       role,
+      password: password ? String(password).trim() : 'Mec@2026',
       phone: phone || '',
       avatar: initials,
       specialization: specialization || expertise || '',
       expertise: expertise || specialization || '',
       status: 'active'
     });
-    res.status(201).json({ success: true, user: newUser });
+    res.status(201).json({ success: true, user: db.sanitizeUser(newUser) });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -132,12 +134,16 @@ router.post('/users', requireOpsOrSupervisor, (req, res) => {
 // PUT /api/operations/users/:id
 router.put('/users/:id', requireOpsOrSupervisor, (req, res) => {
   const { id } = req.params;
-  const updates = req.body;
+  const updates = { ...req.body };
+  // If password update is included
+  if (updates.password) {
+    updates.password = String(updates.password).trim();
+  }
 
   const updatedUser = db.updateUser(id, updates);
   if (!updatedUser) return res.status(404).json({ error: 'User not found' });
 
-  res.json({ success: true, user: updatedUser });
+  res.json({ success: true, user: db.sanitizeUser(updatedUser) });
 });
 
 // ==========================================

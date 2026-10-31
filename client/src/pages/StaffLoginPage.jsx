@@ -4,56 +4,40 @@ import {
   ShieldCheck, 
   Sliders, 
   Eye, 
+  EyeOff,
   ArrowRight, 
   Lock, 
   AlertCircle,
   ArrowLeft,
-  KeyRound
+  KeyRound,
+  Info
 } from 'lucide-react';
 
 export default function StaffLoginPage({ onNavigate }) {
-  const { login, demoLogin, loading } = useAuth();
+  const { login, loading } = useAuth();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState('operations'); // 'operations' | 'supervisor'
   const [errorMessage, setErrorMessage] = useState('');
-
-  const demoAccounts = {
-    operations: {
-      id: "usr_ops_1",
-      name: "Mariam Samir",
-      email: "mariam.samir@mec.edu",
-      role: "operations",
-      avatar: "MS",
-      phone: "+20 100 882 1100",
-      department: "Academic Operations & Registrations"
-    },
-    supervisor: {
-      id: "usr_sup_1",
-      name: "Dr. Khaled Al-Masry",
-      email: "khaled.masry@mec.edu",
-      role: "supervisor",
-      avatar: "KM",
-      phone: "+20 100 999 0011",
-      department: "Director of Academic Quality & Oversight"
-    }
-  };
 
   const handleStaffLogin = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-    if (!email) {
-      setErrorMessage('Please enter your official academy staff email.');
+    if (!email || !password) {
+      setErrorMessage('Please enter both your staff email and password.');
       return;
     }
 
     try {
       await login({
-        email,
+        email: email.trim(),
+        password: password.trim(),
         role: selectedRole,
         accessPath: 'staff'
       });
     } catch (err) {
-      setErrorMessage(err.message || 'Staff authentication failed');
+      setErrorMessage(err.message || 'Staff authentication failed. Please verify your credentials.');
     }
   };
 
@@ -100,7 +84,7 @@ export default function StaffLoginPage({ onNavigate }) {
           <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-5">
             <button
               type="button"
-              onClick={() => { setSelectedRole('operations'); setEmail('mariam.samir@mec.edu'); }}
+              onClick={() => setSelectedRole('operations')}
               className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedRole === 'operations'
                   ? 'bg-amber-500 text-slate-950 shadow-sm'
@@ -112,7 +96,7 @@ export default function StaffLoginPage({ onNavigate }) {
             </button>
             <button
               type="button"
-              onClick={() => { setSelectedRole('supervisor'); setEmail('khaled.masry@mec.edu'); }}
+              onClick={() => setSelectedRole('supervisor')}
               className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedRole === 'supervisor'
                   ? 'bg-rose-500 text-white shadow-sm'
@@ -140,6 +124,7 @@ export default function StaffLoginPage({ onNavigate }) {
               </label>
               <input
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={selectedRole === 'operations' ? 'mariam.samir@mec.edu' : 'khaled.masry@mec.edu'}
@@ -149,13 +134,25 @@ export default function StaffLoginPage({ onNavigate }) {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Access Security Key / Password
+                Access Security Password
               </label>
-              <input
-                type="password"
-                defaultValue="••••••••••••"
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your staff password"
+                  className="w-full px-3.5 py-2.5 pr-10 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
@@ -172,54 +169,10 @@ export default function StaffLoginPage({ onNavigate }) {
             </button>
           </form>
 
-          {/* Fast 1-Click Demo Staff Logins */}
-          <div className="mt-6 pt-5 border-t border-slate-800">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2.5 text-center">
-              Fast 1-Click Staff Access
-            </span>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => demoLogin(demoAccounts.operations)}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 transition-all flex items-center justify-between text-xs cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="h-7 w-7 rounded-lg bg-amber-500/20 text-amber-300 font-bold flex items-center justify-center text-[11px] border border-amber-500/30">
-                    MS
-                  </span>
-                  <div>
-                    <span className="font-semibold text-white group-hover:text-amber-300 transition-colors">
-                      Mariam Samir
-                    </span>
-                    <span className="text-[10px] text-slate-400 block font-mono">
-                      Operations Staff Lead (Manage Courses, Groups, Staff)
-                    </span>
-                  </div>
-                </div>
-                <span className="text-amber-400 text-[11px] font-bold">Enter &rarr;</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => demoLogin(demoAccounts.supervisor)}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-rose-500/50 transition-all flex items-center justify-between text-xs cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="h-7 w-7 rounded-lg bg-rose-500/20 text-rose-300 font-bold flex items-center justify-center text-[11px] border border-rose-500/30">
-                    KM
-                  </span>
-                  <div>
-                    <span className="font-semibold text-white group-hover:text-rose-300 transition-colors">
-                      Dr. Khaled Al-Masry
-                    </span>
-                    <span className="text-[10px] text-slate-400 block font-mono">
-                      Academy Academic Director & Supervisor (Oversight View)
-                    </span>
-                  </div>
-                </div>
-                <span className="text-rose-400 text-[11px] font-bold">Enter &rarr;</span>
-              </button>
-            </div>
+          {/* Secure Hint */}
+          <div className="mt-6 pt-4 border-t border-slate-800 text-center text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <span>Default seed password is <code className="bg-slate-950 text-indigo-300 font-mono px-1 py-0.5 rounded">Mec@2026</code>.</span>
           </div>
 
         </div>
@@ -227,7 +180,7 @@ export default function StaffLoginPage({ onNavigate }) {
       </main>
 
       <footer className="border-t border-slate-900 py-3 text-center text-xs text-slate-600">
-        MEC Academy Administrative Architecture • Strict Path Separation
+        MEC Academy Administrative Architecture • Secure Access Control
       </footer>
 
     </div>
